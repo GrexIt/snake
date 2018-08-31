@@ -25,7 +25,8 @@ class App extends Component {
         }
     }
 
-    // movingDirection can be left, right, up and down
+    // movingDirection can be left, right, up and down, default set to right
+    // previousDirection is needed to keep the tail moving in the previousDirection
     constructor(props) {
         super(props);
         this.state = {
