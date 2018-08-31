@@ -33,6 +33,7 @@ class App extends Component {
             head: { ypos: null, xpos: null },
             tail: { ypos: null, xpos: null },
             movingDirection: 'right',
+            previousDirection: null,
             deltaLeftOnDirectionChange: null,
             snakeLength: INITIAL_SNAKE_LENGTH
         };
@@ -50,6 +51,7 @@ class App extends Component {
 
     changeDirection(keyCode) {
         let newDirection;
+        this.setState({ previousDirection: this.state.movingDirection});
         if(keyCode === 38) {
             newDirection = 'up';
         }
@@ -95,6 +97,7 @@ class App extends Component {
         this.setState({ grid, head: newhead });
     }
 
+    // This function is incomplete and needs improvements to handle the pivot movement
     moveTowardsRight() {
         if (this.state.head.xpos === GRID_SIZE-1) {
             console.log('game over');
@@ -104,6 +107,7 @@ class App extends Component {
         this.moveTailToRight();
     }
 
+    // This function is almost complete with a bug
     moveTowardsUp() {
         if (this.state.head.ypos === 0) {
             console.log('game over');
@@ -119,19 +123,26 @@ class App extends Component {
         this.moveTailUpwards();
     }
 
+    /**
+     * This function moves the snake in difined direction
+     */
     moveSnake() {
         if(!this.state.movingDirection) {
             // Direction is not yet set
             return;
         }
-        if(this.state.movingDirection === 'right') {
-            this.moveTowardsRight();
-        }
         if(this.state.movingDirection === 'up') {
             this.moveTowardsUp();
         }
+        if(this.state.movingDirection === 'right') {
+            this.moveTowardsRight();
+        }
     }
 
+    /**
+     * We are trying to set the initial position of snake in the mid section
+     * After the setState Grid rerenders itself
+     */
     setInitialPostionForSnake() {
         const grid = this.state.grid;
         for(let idx = 0; idx < INITIAL_SNAKE_LENGTH; idx++) {
@@ -145,15 +156,22 @@ class App extends Component {
         this.setState({ grid, head, tail });
     }
 
+    /**
+     * value 0 means snake is not present here
+     * value 1 means snake is present in this pixel
+     * value 2 means we are going to keep an apple here for snake's breakfast
+     */
     renderPixel(value, colIndex, rowIndex) {
         let finalClass;
         if (value === 0) {
             finalClass = Object.assign({}, pixelStyle, lightGreenBackground)
             const sum = colIndex + rowIndex;
+            // This is to make the grid like chess board
             if (sum%2 === 0) {
                 finalClass = Object.assign({}, pixelStyle, darkGreenBackground)
             }
         }
+        // This means snake is present in this pixel
         else if (value === 1) {
             finalClass = Object.assign({}, pixelStyle, blueBackground)
         }
