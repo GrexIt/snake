@@ -36,6 +36,7 @@ class App extends Component {
             movingDirection: 'right',
             previousDirection: null,
             deltaLeftOnDirectionChange: null,
+            deltaUpOnDirectionChange: null,
             snakeLength: INITIAL_SNAKE_LENGTH
         };
         this.initializeGrid();
@@ -66,13 +67,12 @@ class App extends Component {
             newDirection = 'left';
         }
         const { snakeLength } = this.state;
-        this.setState({ movingDirection: newDirection, deltaLeftOnDirectionChange:  snakeLength});
+        this.setState({ movingDirection: newDirection, deltaLeftOnDirectionChange:  snakeLength, deltaUpOnDirectionChange:  snakeLength});
     }
 
     moveTailUpwards() {
         const grid = this.state.grid;
-        console.log(this.state.tail);
-        grid[this.state.tail.ypos][this.state.tail.xpos-1] = 0;
+        grid[this.state.tail.ypos][this.state.tail.xpos] = 0;
         const newtail = {ypos: this.state.tail.ypos -1, xpos: this.state.tail.xpos };
         this.setState({ grid, tail: newtail });
     }
@@ -105,6 +105,12 @@ class App extends Component {
             return;
         }
         this.moveHeadToRight();
+        const { deltaUpOnDirectionChange } = this.state;
+        if(deltaUpOnDirectionChange > 1) {
+            this.moveTailUpwards();
+            this.setState({ deltaUpOnDirectionChange : deltaUpOnDirectionChange -1 });
+            return;
+        }
         this.moveTailToRight();
     }
 
@@ -114,18 +120,21 @@ class App extends Component {
             console.log('game over');
             return;
         }
+
         this.moveHeadToUp();
+
         const { deltaLeftOnDirectionChange } = this.state;
-        if(deltaLeftOnDirectionChange > 0) {
+        if(deltaLeftOnDirectionChange > 1) {
             this.moveTailToRight();
             this.setState({ deltaLeftOnDirectionChange : deltaLeftOnDirectionChange -1 });
             return;
         }
+
         this.moveTailUpwards();
     }
 
     /**
-     * This function moves the snake in difined direction
+     * This function moves the snake in defined direction
      */
     moveSnake() {
         if(!this.state.movingDirection) {
