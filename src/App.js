@@ -35,24 +35,32 @@ class App extends Component {
             tail: { ypos: null, xpos: null },
             movingDirection: 'right',
             previousDirection: null,
-            deltaLeftOnDirectionChange: null,
-            snakeLength: INITIAL_SNAKE_LENGTH
+            deltaLeftOnDirectionChange: 0,
+            deltaUpOnDirectionChange: 0,
+            snakeLength: INITIAL_SNAKE_LENGTH,
+            gameOver: false
         };
         this.initializeGrid();
     }
 
     componentDidMount() {
-        const that = this;
         this.setInitialPostionForSnake();
         setInterval(this.moveSnake.bind(this), 500);
-        window.onkeyup = function(e) {
-            that.changeDirection(e.keyCode);
+        window.onkeyup = (e) => {
+            // Only take desired key. Ignore rest
+            if (![37, 38, 39, 40].includes(e.keyCode)) {
+              return;
+            }
+
+            this.changeDirection(e.keyCode);
         };
     }
 
     changeDirection(keyCode) {
         let newDirection;
-        this.setState({ previousDirection: this.state.movingDirection});
+
+        const currentDirection = this.state.movingDirection;
+
         if(keyCode === 38) {
             newDirection = 'up';
         }
@@ -65,14 +73,20 @@ class App extends Component {
         if(keyCode === 37) {
             newDirection = 'left';
         }
+
+        // If  current and new directions are same, no need to do anything
+        if (currentDirection === newDirection) {
+          return;
+        }
+
         const { snakeLength } = this.state;
-        this.setState({ movingDirection: newDirection, deltaLeftOnDirectionChange:  snakeLength});
+
+        this.setState({ previousDirection: currentDirection, movingDirection: newDirection, deltaLeftOnDirectionChange:  snakeLength, deltaUpOnDirectionChange:  snakeLength});
     }
 
     moveTailUpwards() {
         const grid = this.state.grid;
-        console.log(this.state.tail);
-        grid[this.state.tail.ypos][this.state.tail.xpos-1] = 0;
+        grid[this.state.tail.ypos][this.state.tail.xpos] = 0;
         const newtail = {ypos: this.state.tail.ypos -1, xpos: this.state.tail.xpos };
         this.setState({ grid, tail: newtail });
     }
@@ -101,36 +115,46 @@ class App extends Component {
     // This function is incomplete and needs improvements to handle the pivot movement
     moveTowardsRight() {
         if (this.state.head.xpos === GRID_SIZE-1) {
+            this.setState({gameOver: true});
             console.log('game over');
             return;
         }
         this.moveHeadToRight();
+        const { deltaUpOnDirectionChange } = this.state;
+        if(deltaUpOnDirectionChange > 1) {
+            this.moveTailUpwards();
+            this.setState({ deltaUpOnDirectionChange : deltaUpOnDirectionChange -1 });
+            return;
+        }
         this.moveTailToRight();
     }
 
     // This function is almost complete with a bug
     moveTowardsUp() {
         if (this.state.head.ypos === 0) {
+            this.setState({gameOver: true});
             console.log('game over');
             return;
         }
+
         this.moveHeadToUp();
+
         const { deltaLeftOnDirectionChange } = this.state;
-        if(deltaLeftOnDirectionChange > 0) {
+        if (deltaLeftOnDirectionChange > 1) {
             this.moveTailToRight();
             this.setState({ deltaLeftOnDirectionChange : deltaLeftOnDirectionChange -1 });
             return;
         }
+
         this.moveTailUpwards();
     }
 
     /**
-     * This function moves the snake in difined direction
+     * This function moves the snake in defined direction
      */
     moveSnake() {
-        if(!this.state.movingDirection) {
-            // Direction is not yet set
-            return;
+        if (this.state.gameOver || !this.state.movingDirection) {
+          return
         }
         if(this.state.movingDirection === 'up') {
             this.moveTowardsUp();
