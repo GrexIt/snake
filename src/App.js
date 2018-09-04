@@ -2,16 +2,35 @@ import React, { Component } from 'react';
 import './App.css';
 
 const GRID_LENGTH = 520;
-const PIXEL_SIZE = 40;
-const INITIAL_SNAKE_LENGTH = 4;
-const GRID_SIZE = GRID_LENGTH/PIXEL_SIZE;
+const PIXEL_SIZE = 20;
+const INITIAL_SNAKE_LENGTH = 7;
+const GRID_SIZE = Math.floor(GRID_LENGTH/PIXEL_SIZE);
 const SNAKE_X_INITIAL_POSITION = 0;
 const SNAKE_Y_INITIAL_POSITION = parseInt(GRID_SIZE/2, 10);
 const LIGHT_GREEN = '#9FD959';
 const DARK_GREEN = '#84CC4C';
 const BLUE = '#4F77F4';
 
+
+const DIRECTION_MAP = {
+  37: 'left',
+  39: 'right',
+  38: 'up',
+  40: 'down'
+}
+
 class App extends Component {
+
+    constructor(props) {
+        super(props);
+        this.state = {
+            grid: [],
+            snake: [],
+            movingDirection: 'right',
+            gameOver: false
+        };
+        this.initializeGrid();
+    }
 
     // GRID_SIZE is the number of pixels in the grid
     // Our 2D matrix would be GRID_SIZE x GRID_SIZE
@@ -25,119 +44,108 @@ class App extends Component {
         }
     }
 
-    // movingDirection can be left, right, up and down, default set to right
-    // previousDirection is needed to keep the tail moving in the previousDirection
-    constructor(props) {
-        super(props);
-        this.state = {
-            grid: [],
-            head: { ypos: null, xpos: null },
-            tail: { ypos: null, xpos: null },
-            movingDirection: 'right',
-            previousDirection: null,
-            deltaLeftOnDirectionChange: null,
-            snakeLength: INITIAL_SNAKE_LENGTH
-        };
-        this.initializeGrid();
-    }
-
-    componentDidMount() {
-        const that = this;
-        this.setInitialPostionForSnake();
-        setInterval(this.moveSnake.bind(this), 500);
-        window.onkeyup = function(e) {
-            that.changeDirection(e.keyCode);
-        };
-    }
-
-    changeDirection(keyCode) {
-        let newDirection;
-        this.setState({ previousDirection: this.state.movingDirection});
-        if(keyCode === 38) {
-            newDirection = 'up';
-        }
-        if(keyCode === 40) {
-            newDirection = 'down';
-        }
-        if(keyCode === 39) {
-            newDirection = 'right';
-        }
-        if(keyCode === 37) {
-            newDirection = 'left';
-        }
-        const { snakeLength } = this.state;
-        this.setState({ movingDirection: newDirection, deltaLeftOnDirectionChange:  snakeLength});
-    }
-
-    moveTailUpwards() {
-        const grid = this.state.grid;
-        console.log(this.state.tail);
-        grid[this.state.tail.ypos][this.state.tail.xpos-1] = 0;
-        const newtail = {ypos: this.state.tail.ypos -1, xpos: this.state.tail.xpos };
-        this.setState({ grid, tail: newtail });
-    }
-
-    moveTailToRight() {
-        const grid = this.state.grid;
-        grid[this.state.tail.ypos][this.state.tail.xpos] = 0;
-        const newtail = {ypos: this.state.tail.ypos, xpos: this.state.tail.xpos + 1};
-        this.setState({ grid, tail: newtail });
-    }
-
-    moveHeadToRight() {
-        const grid = this.state.grid;
-        grid[this.state.head.ypos][this.state.head.xpos + 1] = 1;
-        const newhead = {ypos: this.state.head.ypos, xpos: this.state.head.xpos + 1};
-        this.setState({ grid, head: newhead });
-    }
-
-    moveHeadToUp() {
-        const grid = this.state.grid;
-        grid[this.state.head.ypos -1 ][this.state.head.xpos] = 1;
-        const newhead = {ypos: this.state.head.ypos -1, xpos: this.state.head.xpos};
-        this.setState({ grid, head: newhead });
-    }
-
-    // This function is incomplete and needs improvements to handle the pivot movement
-    moveTowardsRight() {
-        if (this.state.head.xpos === GRID_SIZE-1) {
-            console.log('game over');
-            return;
-        }
-        this.moveHeadToRight();
-        this.moveTailToRight();
-    }
-
-    // This function is almost complete with a bug
-    moveTowardsUp() {
-        if (this.state.head.ypos === 0) {
-            console.log('game over');
-            return;
-        }
-        this.moveHeadToUp();
-        const { deltaLeftOnDirectionChange } = this.state;
-        if(deltaLeftOnDirectionChange > 0) {
-            this.moveTailToRight();
-            this.setState({ deltaLeftOnDirectionChange : deltaLeftOnDirectionChange -1 });
-            return;
-        }
-        this.moveTailUpwards();
+    /**
+    * Start the Game
+    * Sets Inital position for snake, set moving direction to right
+    * Sets interval of snake movement
+    */
+    startGame(){
+      this.setInitialPostionForSnake();
+      this.setState({gameOver: false, movingDirection: 'right'})
+      this.snakeMovingInterval = setInterval(this.moveSnake.bind(this), 200);
     }
 
     /**
-     * This function moves the snake in difined direction
+    * Ends the Game
+    * Clears interval of snake movement
+    */
+    endGame() {
+      alert("Game Over");
+      if (this.snakeMovingInterval) {
+        clearInterval(this.snakeMovingInterval);
+      }
+    }
+
+    /**
+    * Changes snake's direction
+    * If new direction is same as current direction, do nothing
+    * If new direction is opposite to current direction, do nothing
+    */
+    changeDirection(e) {
+      const {keyCode} = e;
+
+      if (![37, 38, 39, 40].includes(keyCode)) {
+        return
+      }
+
+      const {movingDirection} = this.state;
+      const newDirection = DIRECTION_MAP[keyCode];
+
+      if ((['left', 'right'].indexOf(movingDirection) > -1 && ['left', 'right'].indexOf(newDirection) > -1) ||
+          (['up', 'down'].indexOf(movingDirection) > -1 && ['up', 'down'].indexOf(newDirection) > -1)) {
+          return;
+      }
+
+      this.setState({ movingDirection: DIRECTION_MAP[keyCode] });
+    }
+
+    /**
+     * This function moves the snake in defined direction
+     * The idea is to set the new head of the snake according to the defined direction
+     * Then Remove the tail of the snake's old position
+     * Finally joining the rest of the body with new head to set snake's new position
      */
     moveSnake() {
-        if(!this.state.movingDirection) {
-            // Direction is not yet set
-            return;
-        }
-        if(this.state.movingDirection === 'up') {
-            this.moveTowardsUp();
-        }
-        if(this.state.movingDirection === 'right') {
-            this.moveTowardsRight();
-        }
+      if (this.state.gameOver) {
+          this.endGame();
+          return
+      }
+      var newSnake = [];
+      const oldSnake = this.state.snake;
+      switch (this.state.movingDirection) {
+        case 'left':
+          newSnake[0] = {ypos: oldSnake[0].ypos, xpos: oldSnake[0].xpos - 1};
+          break;
+        case 'right':
+          newSnake[0] = {ypos: oldSnake[0].ypos, xpos: oldSnake[0].xpos + 1};
+          break;
+        case 'up':
+          newSnake[0] = {ypos: oldSnake[0].ypos - 1, xpos: oldSnake[0].xpos};
+          break;
+        case 'down':
+          newSnake[0] = {ypos: oldSnake[0].ypos + 1, xpos: oldSnake[0].xpos};
+          break;
+        default:
+          break;
+      }
+
+      if (this.isInValid(newSnake[0]) || this.isOverlapping(newSnake[0], oldSnake)) {
+        this.setState({gameOver: true});
+        return
+      }
+
+      oldSnake.pop();
+      newSnake.push(...oldSnake);
+
+      this.setState({ snake: newSnake });
+    }
+
+    /**
+     * Checks snake's new head for valid cell
+     */
+    isInValid(head) {
+      return head.xpos === GRID_SIZE || head.ypos === -1 || head.xpos === -1 || head.ypos === GRID_SIZE
+    }
+
+    /**
+     * Checks whether snake's new head overlaps with the body
+     */
+    isOverlapping(head, oldSnake) {
+      return (
+        oldSnake.filter(c => {
+          return head.xpos === c.xpos && head.ypos === c.ypos
+        }).length > 0
+      );
     }
 
     /**
@@ -145,16 +153,12 @@ class App extends Component {
      * After the setState Grid rerenders itself
      */
     setInitialPostionForSnake() {
-        const grid = this.state.grid;
-        for(let idx = 0; idx < INITIAL_SNAKE_LENGTH; idx++) {
-            const xpos = SNAKE_X_INITIAL_POSITION + idx;
-            grid[SNAKE_Y_INITIAL_POSITION][xpos] = 1;
+        var snake = [];
+        let  x = SNAKE_X_INITIAL_POSITION;
+        for(let i = INITIAL_SNAKE_LENGTH - 1; i >= 0; i-- ) {
+          snake.unshift({ypos: SNAKE_Y_INITIAL_POSITION, xpos: x++})
         }
-        const xpos = SNAKE_X_INITIAL_POSITION + INITIAL_SNAKE_LENGTH -1;
-        const ypos = SNAKE_Y_INITIAL_POSITION;
-        const head = { ypos, xpos };
-        const tail = { ypos, xpos: SNAKE_X_INITIAL_POSITION };
-        this.setState({ grid, head, tail });
+        this.setState({ snake: snake });
     }
 
     /**
@@ -181,21 +185,23 @@ class App extends Component {
     }
 
     renderRows(rowArray, colIndex) {
-        const that = this;
-        return rowArray.map(function(value, rowIndex) {
+        return rowArray.map( (value, rowIndex) => {
             const key = "row_" + rowIndex;
+            let snakeCell = this.state.snake.filter(c => c.xpos === rowIndex && c.ypos === colIndex);
+            if(snakeCell.length > 0) {
+              value = 1
+            }
             return <div key={key} id={key}>
-                {that.renderPixel(value, colIndex, rowIndex)}
+                {this.renderPixel(value, colIndex, rowIndex)}
             </div>;
         });
     }
 
     renderColumns() {
-        const that = this;
-        return this.state.grid.map(function(rowArray, colIndex){
+        return this.state.grid.map( (rowArray, colIndex) => {
             const key = "col_" + colIndex;
             return <div key={key} id={key} style={columnStyle}>
-                {that.renderRows(rowArray, colIndex)}
+                {this.renderRows(rowArray, colIndex)}
             </div>;
         });
     }
@@ -210,11 +216,13 @@ class App extends Component {
 
     render() {
         return (
-          <div className="App">
+          <div className="App" onKeyDown={this.changeDirection.bind(this)}>
             <h1>Snake @ Hiver</h1>
             <div style={topMostParent}>
                 {this.renderGrid()}
             </div>
+
+            <button style={buttonStyle} onClick={this.startGame.bind(this)}>Start Game</button>
           </div>
         );
     }
@@ -254,5 +262,14 @@ const pixelStyle = {
     width: PIXEL_SIZE,
     height: PIXEL_SIZE
 };
+
+const buttonStyle = {
+  backgroundColor : '#f2f2f2',
+  color: 'black',
+  borderRadius: '3px',
+  marginTop: '10px',
+  padding: '4px',
+  cursor: 'pointer'
+}
 
 export default App;
