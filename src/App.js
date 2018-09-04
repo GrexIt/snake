@@ -3,7 +3,7 @@ import './App.css';
 
 const GRID_LENGTH = 520;
 const PIXEL_SIZE = 20;
-const INITIAL_SNAKE_LENGTH = 4;
+const INITIAL_SNAKE_LENGTH = 7;
 const GRID_SIZE = Math.floor(GRID_LENGTH/PIXEL_SIZE);
 const SNAKE_X_INITIAL_POSITION = 0;
 const SNAKE_Y_INITIAL_POSITION = parseInt(GRID_SIZE/2, 10);
@@ -21,6 +21,17 @@ const DIRECTION_MAP = {
 
 class App extends Component {
 
+    constructor(props) {
+        super(props);
+        this.state = {
+            grid: [],
+            snake: [],
+            movingDirection: 'right',
+            gameOver: false
+        };
+        this.initializeGrid();
+    }
+
     // GRID_SIZE is the number of pixels in the grid
     // Our 2D matrix would be GRID_SIZE x GRID_SIZE
     initializeGrid() {
@@ -33,26 +44,21 @@ class App extends Component {
         }
     }
 
-    // movingDirection can be left, right, up and down, default set to right
-    // previousDirection is needed to keep the tail moving in the previousDirection
-    constructor(props) {
-        super(props);
-        this.state = {
-            grid: [],
-            snake: [],
-            movingDirection: 'right',
-            gameOver: false
-        };
-        this.initializeGrid();
-    }
-
-
+    /**
+    * Start the Game
+    * Sets Inital position for snake, set moving direction to right
+    * Sets interval of snake movement
+    */
     startGame(){
       this.setInitialPostionForSnake();
       this.setState({gameOver: false, movingDirection: 'right'})
       this.snakeMovingInterval = setInterval(this.moveSnake.bind(this), 200);
     }
 
+    /**
+    * Ends the Game
+    * Clears interval of snake movement
+    */
     endGame() {
       alert("Game Over");
       if (this.snakeMovingInterval) {
@@ -60,26 +66,30 @@ class App extends Component {
       }
     }
 
+    /**
+    * Changes snake's direction
+    * If new direction is same as current direction, do nothing
+    * If new direction is opposite to current direction, do nothing
+    */
     changeDirection(e) {
       const {keyCode} = e;
       const {movingDirection} = this.state;
       const newDirection = DIRECTION_MAP[keyCode];
-      let shouldChangeDirection = true;
 
       if (movingDirection === newDirection ||
           (['left', 'right'].indexOf(movingDirection) > -1 && ['left', 'right'].indexOf(newDirection) > -1) ||
           (['up', 'down'].indexOf(movingDirection) > -1 && ['up', 'down'].indexOf(newDirection) > -1)) {
-          shouldChangeDirection = false;
+          return;
       }
 
-      if (shouldChangeDirection) {
-          this.setState({ movingDirection: DIRECTION_MAP[keyCode] });
-      }
-
+      this.setState({ movingDirection: DIRECTION_MAP[keyCode] });
     }
 
     /**
      * This function moves the snake in defined direction
+     * The idea is to set the new head of the snake according to the defined direction
+     * Then Remove the tail of the snake's old position
+     * Finally joining the rest of the body with new head to set snake's new position
      */
     moveSnake() {
       if (this.state.gameOver) {
@@ -105,16 +115,33 @@ class App extends Component {
           break;
       }
 
-      oldSnake.pop();
-      newSnake.push(...oldSnake);
-
-      this.setState({ snake: newSnake });
-
-      if (newSnake[0].xpos === GRID_SIZE-1 || newSnake[0].ypos === 0 || newSnake[0].xpos === 0 || newSnake[0].ypos === GRID_SIZE-1) {
+      if (this.isInValid(newSnake[0]) || this.isOverlapping(newSnake[0], oldSnake)) {
         this.setState({gameOver: true});
         return
       }
 
+      oldSnake.pop();
+      newSnake.push(...oldSnake);
+
+      this.setState({ snake: newSnake });
+    }
+
+    /**
+     * Checks snake's new head for valid cell
+     */
+    isInValid(head) {
+      return head.xpos === GRID_SIZE || head.ypos === -1 || head.xpos === -1 || head.ypos === GRID_SIZE
+    }
+
+    /**
+     * Checks whether snake's new head overlaps with the body
+     */
+    isOverlapping(head, oldSnake) {
+      return (
+        oldSnake.filter(c => {
+          return head.xpos === c.xpos && head.ypos === c.ypos
+        }).length > 0
+      );
     }
 
     /**
