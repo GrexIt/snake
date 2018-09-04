@@ -73,11 +73,15 @@ class App extends Component {
     */
     changeDirection(e) {
       const {keyCode} = e;
+
+      if (![37, 38, 39, 40].includes(keyCode)) {
+        return
+      }
+
       const {movingDirection} = this.state;
       const newDirection = DIRECTION_MAP[keyCode];
 
-      if (movingDirection === newDirection ||
-          (['left', 'right'].indexOf(movingDirection) > -1 && ['left', 'right'].indexOf(newDirection) > -1) ||
+      if ((['left', 'right'].indexOf(movingDirection) > -1 && ['left', 'right'].indexOf(newDirection) > -1) ||
           (['up', 'down'].indexOf(movingDirection) > -1 && ['up', 'down'].indexOf(newDirection) > -1)) {
           return;
       }
